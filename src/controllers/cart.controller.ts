@@ -36,6 +36,8 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
   } else {
     cart.items.push({
       product: product._id,
+      title: product.title,
+      image: product.image[0],
       quantity,
       price: product.price,
     });
@@ -49,20 +51,18 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
   await cart.save();
   res.json(cart);
 };
-
-
 export const getCart = async (req: AuthRequest, res: Response) => {
+  
   const cart = await Cart.findOne({ user: req.user!.userId }).populate(
     "items.product"
   );
+  
 
   res.json(cart || { items: [], totalPrice: 0 });
 };
 
-export const mergeCart = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const mergeCart = async (req: AuthRequest, res: Response) => {
+  const { productId, quantity = 1 } = req.body;
   const { items } = req.body;
 
   if (!req.user) {
@@ -78,6 +78,10 @@ export const mergeCart = async (
       totalPrice: 0,
     });
   }
+  const product = await Product.findById(productId);
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
 
   for (const item of items) {
     const index = cart.items.findIndex(
@@ -89,6 +93,8 @@ export const mergeCart = async (
     } else {
       cart.items.push({
         product: item.productId,
+        title: product.title,
+        image: product.image[0],
         quantity: item.quantity,
         price: item.price,
       });
@@ -103,7 +109,6 @@ export const mergeCart = async (
   await cart.save();
   res.json({ message: "Cart merged successfully" });
 };
-
 
 /**
  * UPDATE CART ITEM QUANTITY
