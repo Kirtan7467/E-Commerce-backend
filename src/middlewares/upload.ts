@@ -29,8 +29,8 @@ const createStorage = (folder: "products" | "banners") =>
   });
 
 const imageFileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
-  const allowedMimeTypes = ["image/jpeg", "image/jpg"];
-  const allowedExt = [".jpg", ".jpeg"];
+  const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png"];
+  const allowedExt = [".jpg", ".jpeg" ,".png"];
 
   const ext = path.extname(file.originalname).toLowerCase();
 

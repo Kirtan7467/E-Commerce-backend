@@ -37,9 +37,8 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
     cart.items.push({
       product: product._id,
       title: product.title,
-      image: product.image[0],
       quantity,
-      price: product.price,
+      price: product.price,                                                                                         
     });
   }
 
@@ -58,11 +57,13 @@ export const getCart = async (req: AuthRequest, res: Response) => {
   );
   
 
-  res.json(cart || { items: [], totalPrice: 0 });
+  res.json({
+  items: cart?.items || [],
+  totalPrice: cart?.totalPrice || 0,
+});
 };
 
 export const mergeCart = async (req: AuthRequest, res: Response) => {
-  const { productId, quantity = 1 } = req.body;
   const { items } = req.body;
 
   if (!req.user) {
@@ -70,20 +71,18 @@ export const mergeCart = async (req: AuthRequest, res: Response) => {
   }
 
   let cart = await Cart.findOne({ user: req.user.userId });
-
   if (!cart) {
-    cart = await Cart.create({
+    cart = new Cart({
       user: req.user.userId,
       items: [],
       totalPrice: 0,
     });
   }
-  const product = await Product.findById(productId);
-  if (!product) {
-    return res.status(404).json({ message: "Product not found" });
-  }
 
   for (const item of items) {
+    const product = await Product.findById(item.productId);
+    if (!product) continue;
+
     const index = cart.items.findIndex(
       (i) => i.product.toString() === item.productId
     );
@@ -94,9 +93,8 @@ export const mergeCart = async (req: AuthRequest, res: Response) => {
       cart.items.push({
         product: item.productId,
         title: product.title,
-        image: product.image[0],
         quantity: item.quantity,
-        price: item.price,
+        price: product.price, // ✅ FIX
       });
     }
   }
@@ -109,6 +107,7 @@ export const mergeCart = async (req: AuthRequest, res: Response) => {
   await cart.save();
   res.json({ message: "Cart merged successfully" });
 };
+
 
 /**
  * UPDATE CART ITEM QUANTITY
