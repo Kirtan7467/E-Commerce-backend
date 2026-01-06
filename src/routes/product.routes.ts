@@ -23,7 +23,7 @@ router.post(
   "/",
   protect,
   vendorOnly,
-  productUpload.single("image"),
+  productUpload.array("image",5),
   productController.createProduct
 );
 
