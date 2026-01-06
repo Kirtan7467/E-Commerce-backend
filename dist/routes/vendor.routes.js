@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const vendor_controller_1 = require("../controllers/vendor.controller");
+const auth_1 = require("../middlewares/auth");
+const router = (0, express_1.Router)();
+router.get("/", auth_1.protect, auth_1.adminOnly, vendor_controller_1.getVendors);
+router.patch("/:id/approve", auth_1.protect, auth_1.adminOnly, vendor_controller_1.approveVendor);
+router.patch("/:id/reject", auth_1.protect, auth_1.adminOnly, vendor_controller_1.rejectVendor);
+exports.default = router;
