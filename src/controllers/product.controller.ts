@@ -41,23 +41,73 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
  * GET ALL PRODUCTS (Public)
  */
 export const getProducts = async (req: Request, res: Response) => {
-  const products = await Product.find({ isActive: true }).populate(
-    "vendor",
-    "shopName username firstname lastname"
-  );
+  const {
+    search,
+    minPrice,
+    maxPrice,
+    sort,
+    page = "1",
+    limit = "10",
+  } = req.query;
 
+  // 🔍 Base query
+  const query: any = {
+    isActive: true,
+  };
+
+  // 🔍 Search by title / description
+  if (search) {
+    query.$or = [
+      { title: { $regex: search as string, $options: "i" } },
+      { description: { $regex: search as string, $options: "i" } },
+    ];
+  }
+
+  // 💰 Price filter
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = Number(minPrice);
+    if (maxPrice) query.price.$lte = Number(maxPrice);
+  }
+
+  // 🔃 Sorting
+  let sortOption: any = { createdAt: -1 }; // latest first
+  if (sort === "price_asc") sortOption = { price: 1 };
+  if (sort === "price_desc") sortOption = { price: -1 };
+
+  // 📄 Pagination
+  const pageNumber = Number(page);
+  const pageSize = Number(limit);
+  const skip = (pageNumber - 1) * pageSize;
+
+  // 📦 Fetch products
+  const products = await Product.find(query)
+    .populate("vendor", "shopName username firstname lastname")
+    .sort(sortOption)
+    .skip(skip)
+    .limit(pageSize);
+
+  const total = await Product.countDocuments(query);
+
+  // 🌐 Base URL for images
   const baseUrl = `${req.protocol}://${req.get("host")}`;
 
+  // 🖼 Format images (supports multiple images)
   const formattedProducts = products.map((p) => ({
-    ...p.toObject(),
-    image: `${baseUrl}${p.image}`,
-  }));
+  ...p.toObject(),
+  image: `${baseUrl}${p.image}`, // ✅ string
+}));
+
 
   res.status(httpStatus.OK).json({
+    total,
+    page: pageNumber,
+    totalPages: Math.ceil(total / pageSize),
     count: formattedProducts.length,
     products: formattedProducts,
   });
 };
+
 // GET /vendor/products
 
 export const getVendorProducts = async (req: AuthRequest, res: Response) => {
