@@ -12,20 +12,27 @@ import fs from "fs";
  */
 export const createProduct = async (req: AuthRequest, res: Response) => {
   const { title, description, price, isActive } = req.body;
+
   if (!req.user) {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Unauthorized");
   }
 
   const userId = req.user.userId;
 
-  if (!req.file) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Image is required");
+  // ✅ FIX: handle multiple files
+  if (!req.files || !(req.files instanceof Array) || req.files.length === 0) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "At least one image is required");
   }
+
+  // ✅ convert files to image paths
+  const images = req.files.map(
+    (file) => `/uploads/products/${file.filename}`
+  );
 
   const product = await Product.create({
     title,
     description,
-    image: `/uploads/products/${req.file.filename}`,
+    images,                 // ✅ array
     price: Number(price),
     isActive: isActive ?? true,
     vendor: userId,
@@ -36,6 +43,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
     product,
   });
 };
+
 
 /**
  * GET ALL PRODUCTS (Public)
@@ -95,7 +103,7 @@ export const getProducts = async (req: Request, res: Response) => {
   // 🖼 Format images (supports multiple images)
   const formattedProducts = products.map((p) => ({
   ...p.toObject(),
-  image: `${baseUrl}${p.image}`, // ✅ string
+  image: `${baseUrl}${p.images}`, // ✅ string
 }));
 
 
@@ -127,7 +135,7 @@ export const getVendorProducts = async (req: AuthRequest, res: Response) => {
 
   const formattedProducts = products.map((p) => ({
     ...p.toObject(),
-    image: `${baseUrl}${p.image}`,
+    image: `${baseUrl}${p.images}`,
   }));
 
   res.status(200).json({
@@ -166,8 +174,12 @@ export const updateProduct = async (req: Request, res: Response) => {
   if (price !== undefined) product.price = Number(price);
   if (isActive !== undefined) product.isActive = isActive;
 
-  if ((req as any).file) {
-    product.image = `/uploads/products/${(req as any).file.filename}`;
+  if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+    const newImages = req.files.map(
+      (file) => `/uploads/products/${file.filename}`
+    );
+
+    product.images = newImages;
   }
 
   await product.save();

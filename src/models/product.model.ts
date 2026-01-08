@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IProduct extends Document {
   title: string;
   description: string;
-  image: string;
+  images: string[];
   price: number;
   vendor: mongoose.Types.ObjectId;
   isActive: boolean;
@@ -21,8 +21,8 @@ const productSchema = new Schema<IProduct>(
       required: true,
       trim: true,
     },
-    image: {
-      type: String,
+    images: {
+      type: [String],
       required: true,
     },
     price: {

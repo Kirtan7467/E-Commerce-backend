@@ -31,7 +31,7 @@ router.put(
   "/:id",
   protect,
   adminOrVendor,
-  productUpload.single("image"),
+  productUpload.array("image",5),
   productController.updateProduct
 );
 
