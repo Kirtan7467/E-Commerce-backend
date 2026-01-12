@@ -40,6 +40,21 @@ const imageFileFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
 
   cb(null, true);
 };
+export const productUpload = multer({
+  storage: createStorage("products"),
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB only
+  },
+});
+
+export const bannerUpload = multer({
+  storage: createStorage("banners"),
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB only
+  },
+});
 
 /**
  * 🔥 CUSTOM MIDDLEWARE TO REMOVE DUPLICATE IMAGES
@@ -77,20 +92,6 @@ export const deduplicateImage = (folder: "products" | "banners") => {
   };
 };
 
-export const productUpload = multer({
-  storage: createStorage("products"),
-  fileFilter: imageFileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB only
-  },
-});
 
-export const bannerUpload = multer({
-  storage: createStorage("banners"),
-  fileFilter: imageFileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB only
-  },
-});
 
 

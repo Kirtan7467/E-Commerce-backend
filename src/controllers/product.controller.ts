@@ -148,13 +148,25 @@ export const getVendorProducts = async (req: AuthRequest, res: Response) => {
  * GET PRODUCT BY ID (Public)
  */
 export const getProductById = async (req: Request, res: Response) => {
-  const product = await Product.findById(req.params.id);
+  const product = await Product.findById(req.params.id)
+    .populate("vendor", "shopName username firstname lastname");
 
   if (!product) {
     throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
   }
 
-  res.status(httpStatus.OK).json(product);
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+  const formattedProduct = {
+    ...product.toObject(),
+    images: product.images.map(
+      (img) => `${baseUrl}${img}`
+    ),
+  };
+
+  res.status(httpStatus.OK).json({
+    product: formattedProduct,
+  });
 };
 
 /**
