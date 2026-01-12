@@ -17,25 +17,21 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
     throw new ApiError(httpStatus.UNAUTHORIZED, "Unauthorized");
   }
 
-  const userId = req.user.userId;
-
-  // ✅ FIX: handle multiple files
-  if (!req.files || !(req.files instanceof Array) || req.files.length === 0) {
+  // ✅ Cloudinary files come in req.files
+  if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
     throw new ApiError(httpStatus.BAD_REQUEST, "At least one image is required");
   }
 
-  // ✅ convert files to image paths
-  const images = req.files.map(
-    (file) => `/uploads/products/${file.filename}`
-  );
+  // ✅ Cloudinary image URLs
+  const images = req.files.map((file: any) => file.path);
 
   const product = await Product.create({
     title,
     description,
-    images,                 // ✅ array
+    images,                 // ✅ Cloudinary URLs
     price: Number(price),
     isActive: isActive ?? true,
-    vendor: userId,
+    vendor: req.user.userId,
   });
 
   res.status(httpStatus.CREATED).json({
@@ -43,6 +39,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
     product,
   });
 };
+
 
 
 /**
