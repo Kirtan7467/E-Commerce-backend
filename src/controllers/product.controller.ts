@@ -6,6 +6,7 @@ import { downloadImage } from "../middlewares/uploadExcel";
 import { AuthRequest } from "../middlewares/auth";
 import XLSX from "xlsx";
 import fs from "fs";
+import cloudinary from "../config/cloudinary";
 
 /**
  * VENDOR: CREATE PRODUCT
@@ -264,25 +265,16 @@ export const uploadProductsExcel = async (
 ): Promise<void> => {
   // 🔐 Auth check
   if (!req.user || req.user.role !== "vendor") {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "Vendor access only"
-    );
+    throw new ApiError(httpStatus.FORBIDDEN, "Vendor access only");
   }
 
   if (!req.user.userId) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "Vendor ID missing"
-    );
+    throw new ApiError(httpStatus.FORBIDDEN, "Vendor ID missing");
   }
 
   // 📄 File check
   if (!req.file) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "Excel file required"
-    );
+    throw new ApiError(httpStatus.BAD_REQUEST, "Excel file required");
   }
 
   // 📊 Read Excel
@@ -299,42 +291,37 @@ export const uploadProductsExcel = async (
   }>(sheet);
 
   if (!rows.length) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "Excel file is empty"
-    );
+    throw new ApiError(httpStatus.BAD_REQUEST, "Excel file is empty");
   }
 
   const products: any[] = [];
 
   // 🔁 Process rows
   for (const row of rows) {
-  if (!row.title || !row.price || !row.imageUrl) {
-    continue;
+    if (!row.title || !row.price || !row.imageUrl) {
+      continue;
+    }
+
+    try {
+      // ☁️ Upload image URL directly to Cloudinary
+      const uploadResult = await cloudinary.uploader.upload(row.imageUrl, {
+        folder: "ecommerce/products",
+      });
+
+      products.push({
+        title: row.title,
+        description: row.description ?? "",
+        price: Number(row.price),
+        isActive: row.isActive ?? true,
+        images: [uploadResult.secure_url], // ✅ ARRAY
+        vendor: req.user.userId,
+      });
+    } catch (error) {
+      // 🔥 Skip invalid image URLs safely
+      console.error("Image upload failed:", row.imageUrl);
+      continue;
+    }
   }
-
-  let imagePath: string;
-
-  try {
-    imagePath = await downloadImage(
-      row.imageUrl,
-      "products"
-    );
-  } catch {
-    // 🔥 Skip bad image rows safely
-    continue;
-  }
-
-  products.push({
-    title: row.title,
-    description: row.description ?? "",
-    price: Number(row.price),
-    isActive: row.isActive ?? true,
-    image: imagePath,
-    vendor: req.user.userId,
-  });
-}
-
 
   if (!products.length) {
     throw new ApiError(
@@ -346,7 +333,7 @@ export const uploadProductsExcel = async (
   // 💾 Insert into DB
   await Product.insertMany(products);
 
-  // 🧹 Delete Excel after processing
+  // 🧹 Delete Excel file after processing
   fs.unlinkSync(req.file.path);
 
   res.status(httpStatus.CREATED).json({
@@ -354,5 +341,6 @@ export const uploadProductsExcel = async (
     count: products.length,
   });
 };
+
 
 
